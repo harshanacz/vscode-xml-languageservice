@@ -13,11 +13,11 @@ export class Node implements XMLNode {
 	public get attributeNames(): string[] { return this.attributes ? Object.keys(this.attributes) : []; }
 	constructor(public start: number, public end: number, public children: Node[], public parent?: Node) {
 	}
-	public isSameTag(tagInLowerCase: string | undefined) {
+	public isSameTag(tagToMatch: string | undefined) {
 		if (this.tag === undefined) {
-			return tagInLowerCase === undefined;
+			return tagToMatch === undefined;
 		} else {
-			return tagInLowerCase !== undefined && this.tag.length === tagInLowerCase.length && this.tag.toLowerCase() === tagInLowerCase;
+			return tagToMatch !== undefined && this.tag === tagToMatch;
 		}
 	}
 	public get firstChild(): Node | undefined { return this.children[0]; }
@@ -58,10 +58,10 @@ export class XMLParser {
 	}
 
 	public parseDocument(document: TextDocument): XMLDocument {
-		return this.parse(document.getText(), this.dataManager.getVoidElements(document.languageId));
+		return this.parse(document.getText());
 	}
 
-	public parse(text: string, voidElements: string[]): XMLDocument {
+	public parse(text: string): XMLDocument {
 		const scanner = createScanner(text, undefined, undefined, true);
 
 		const xmlDocument = new Node(0, text.length, [], void 0);
@@ -86,10 +86,6 @@ export class XMLParser {
 						curr.end = scanner.getTokenEnd(); // might be later set to end tag position
 						if (scanner.getTokenLength()) {
 							curr.startTagEnd = scanner.getTokenEnd();
-							if (curr.tag && this.dataManager.isVoidElement(curr.tag, voidElements)) {
-								curr.closed = true;
-								curr = curr.parent;
-							}
 						} else {
 							// pseudo close token from an incomplete start tag
 							curr = curr.parent;
@@ -109,7 +105,7 @@ export class XMLParser {
 					endTagName = undefined;
 					break;
 				case TokenType.EndTag:
-					endTagName = scanner.getTokenText().toLowerCase();
+					endTagName = scanner.getTokenText();
 					break;
 				case TokenType.EndTagClose:
 					let node = curr;
